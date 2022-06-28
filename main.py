@@ -1,53 +1,77 @@
-# %% 
+# %% All imports needed in this word cloud script
 import numpy as np
-import pandas as pd
-from os import path
+from timeit import default_timer as timer
+from datetime import timedelta
 from PIL import Image
+from pyparsing import Word
+from wordcloud import ImageColorGenerator, WordCloud
 from matplotlib import pyplot as plt
-from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
 
-# %% read contents of text file into variable named file_contents
-with open('flatland.txt', encoding = 'utf-8-sig') as f:
+# %% read all contents of text file into variable named file_contents
+with open('TheQuestoftheSilverFleece.txt', encoding = 'utf-8-sig') as f:
     file_contents = f.read()
 
-# %% Remove punctuations from the text
-punctuations = '''!()-[]{};:'"\,<>./?@#$%^&*_~'''
+# %% Function to compute frequencies of each word from the file
+def compute_frequencies(file_contents):
+    # Process text by removing punctuation marks and uninteresting words
+    punctuations = '''!()-[]{};:'"\,<>./?@#$%^&*_~'''
+    # If your text file comes from Project Gutenberg, then you may want to
+    # manually remove some of the extra information that is not part of the
+    # actual story.
+    uninteresting_words = [
+        "the", "a", "to", "if", "is", "it", "of", "and", "or","an", "as", "i",
+        "me", "my","we", "our", "ours", "you", "your", "yours", "he", "she",
+        "him", "his", "her", "hers", "its", "they", "them", "their", "what",
+        "which", "who", "whom", "this", "that", "am", "are", "was", "were",
+        "be", "been","being", "have", "has", "had", "do", "does", "did", "but",
+        "at", "by","with", "from", "here", "when", "where", "how", "all",
+        "any", "both","each", "few", "more", "some", "such", "no", "nor",
+        "too", "very", "can","will", "just"
+    ]
 
-text = ""
-for char in file_contents.lower():
-    if char not in punctuations:
-        text = text + char
-    else:
-        if char == '-':
-            text = text + ' '
+    text = ""
+    for char in file_contents.lower():
+        if char == "-":
+            text = text + " "
+        if char not in punctuations:
+            text = text + char
+            
+    # Make a list that does not contain any of the uninteresting words
+    text_list = [i for i in text.split() if i not in uninteresting_words]
+    
+    # %% Compute frequencies of remaining words and store within dictionary
+    result = {}
+    for word in text_list:
+        if word not in result:
+            result[word] = 0
+        result[word] += 1
+    
+    return dict(sorted(result.items(), key = lambda x: x[1], reverse = True))
 
-# %% Rempve uninteresting words from the text
-uninteresting_words = [
-    "the", "a", "to", "if", "is", "it", "of", "and", "or","an", "as", "i", 
-    "me", "my","we", "our", "ours", "you", "your", "yours", "he", "she", "him",
-    "his", "her", "hers", "its", "they", "them", "their", "what", "which",
-    "who", "whom", "this", "that", "am", "are", "was", "were", "be", "been",
-    "being", "have", "has", "had", "do", "does", "did", "but", "at", "by",
-    "with", "from", "here", "when", "where", "how", "all", "any", "both",
-    "each", "few", "more", "some", "such", "no", "nor", "too", "very", "can",
-    "will", "just"]
+# %% 
+start = timer()
 
-text = text.split()
+frequencies = compute_frequencies(file_contents)
 
-for word in uninteresting_words:
-    while word in text:
-        text.remove(word)
-
-# %% Compute frequencies of remaining words and store within dictionary
-frequencies = {}
-for word in text:
-    if word not in frequencies:
-        frequencies[word] = 0
-    frequencies[word] += 1
-
-# %%
-cloud = wordcloud.WordCloud()
+mask = np.array(Image.open("dubois.png"))
+image_colors = ImageColorGenerator(mask)
+cloud = WordCloud(
+    background_color = "white",
+    max_words = 300,
+    max_font_size = 100,
+    mask = mask,
+    mode = "RGBA",
+)
 cloud.generate_from_frequencies(frequencies)
 
-image = cloud.to_array()
+plt.figure(figsize = [100, 100])
+plt.axis("off")
+plt.imshow(
+    cloud.recolor(color_func = image_colors), 
+    interpolation="nearest"
+)
+
+end = timer()
+print(timedelta(seconds = end - start))
+
 # %%
